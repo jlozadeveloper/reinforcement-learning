@@ -1,0 +1,76 @@
+# Configuración de DQN
+# input_shape: (4,)
+# num_actions: 2
+trainer:
+  classname: 'DQNTrainer'
+environment:
+  id: "CartPole-v1"
+  max_episode_steps: 4000
+  render_mode: 'rgb_array'
+  # reward_threshold: 995
+model:
+  classname: "dueling-mpl"
+  dense_layers: 
+    - units: 256
+      activation: "relu"
+      kernel_initializer: "he_uniform"
+    - units: 128
+      activation: "relu"
+      kernel_initializer: "he_uniform"
+    - units: 64
+      activation: "relu"
+      kernel_initializer: "he_uniform"
+compile:
+  loss:
+    function: "MeanSquaredError"
+  optimizer:
+    classname: "Adam"
+    learning_rate: 0.00025
+  metrics:
+    - class: "MeanAbsoluteError"
+      params:
+        name: "mae"
+    - class: "RootMeanSquaredError"
+      params:
+        name: "root_mse"
+    - class: "MeanAbsolutePercentageError"
+      params:
+        name: "mape"
+    - class: "R2Score"
+      params:
+        name: "r2_score"
+policy:
+  classname: "softmax"
+  temperature: 20
+  temperature-decay: 0.999
+  temperature-min: 0.3
+  # entropy-weight: 0.95
+  num_actions: 2
+  # epsilon: 1.0
+  # epsilon-min: 0.001
+  # epsilon-decay: 0.999
+replay-buffer:
+  classname: "standard"
+  capacity: 2000
+agent:
+  classname: 'DQNAgent'
+  episodes: 1000
+  gamma: 0.95
+  batch-size: 64
+  train-start: 1500
+graphs:
+  - title: Score
+    figsize: [20, 15]
+    xlabel: "Episodes"
+    ylabel: "Values"
+    plots:
+      - data: "loss"
+        label: "Perdida"
+      - data: "mae"
+        label: "Mean absolute error"
+      - data: "root_mse"
+        label: "Root mean squared error"
+      - data: "mape"
+        label: "Mean absolute percentage error"
+      - data: "r2_score"
+        label: "R^2 score"

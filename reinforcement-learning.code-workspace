@@ -1,0 +1,18 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"cody.autocomplete.advanced.provider": "experimental-ollama",
+		"cody.autocomplete.experimental.ollamaOptions": {
+			"url": "http://127.0.0.1:11434",
+			"model": "codellama:7b-code"
+		},
+		"cody.chat.preInstruction": "",
+		"cody.debug.verbose": false,
+		"cody.internal.unstable": true,
+		"git.defaultBranchName": "master",
+	}
+}
