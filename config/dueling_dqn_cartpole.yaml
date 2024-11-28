@@ -27,18 +27,14 @@ compile:
     classname: "Adam"
     learning_rate: 0.00025
   metrics:
-    - class: "MeanAbsoluteError"
-      params:
-        name: "mae"
-    - class: "RootMeanSquaredError"
-      params:
-        name: "root_mse"
-    - class: "MeanAbsolutePercentageError"
-      params:
-        name: "mape"
-    - class: "R2Score"
-      params:
-        name: "r2_score"
+    - classname: "MeanAbsoluteError"
+      name: "mae"
+    - classname: "RootMeanSquaredError"
+      name: "root_mse"
+    - classname: "MeanAbsolutePercentageError"
+      name: "mape"
+    - classname: "R2Score"
+      name: "r2_score"
 policy:
   classname: "softmax"
   temperature: 20

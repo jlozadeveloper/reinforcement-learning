@@ -25,23 +25,20 @@ compile:
     classname: "Adam"
     learning_rate: 0.001
   metrics:
-    - class: "MeanAbsoluteError"
-      params:
-        name: "mae"
-    - class: "TestMetric"
-      params:
-        name: "Test_Metric"
-    - class: "MeanQValues"
-      params:
-        name: "MeanQValues"
-        predicted: True
-    # - class: "RootMeanSquaredError"
+    - classname: "MeanAbsoluteError"
+      name: "mae"
+    - classname: "TestMetric"
+      name: "Test_Metric"
+    - classname: "MeanQValues"
+      name: "MeanQValues"
+      predicted: True
+    # - classname: "RootMeanSquaredError"
     #   params:
     #     name: "root_mse"
-    # - class: "MeanAbsolutePercentageError"
+    # - classname: "MeanAbsolutePercentageError"
     #   params:
     #     name: "mape"
-    # - class: "R2Score"
+    # - classname: "R2Score"
     #   params:
     #     name: "r2_score"
 policy:
@@ -57,6 +54,41 @@ agent:
   gamma: 0.95
   batch-size: 64
   train-start: 1000
+callbacks:
+  - classname: 'GenericMetrics'
+    args:
+      - ['epsilon', 'epsilon', min]
+      - ['rwrd', 'reward', sum]
+  - classname: 'NEpisodesReward'
+    name: '50_ep_rwrd'
+    n_episodes: 50
+    n_ep_fn_name: 'mean'
+    batches_fn_name: 'sum'
+  - classname: 'MetricsUpdater'
+  - classname: 'MetricsPrinter'
+    args:
+      - ['Ep', 'episode']
+      - ['Epsilon', 'epsilon']
+      - ['Rwrd', 'rwrd']
+      - ['50_Ep_Rwrd', '50_ep_rwrd']
+  - classname: 'ModelCheckpoint'
+    # filepath: (self.logs_folder / 'checkpoints/checkpoint_{epoch}.keras').as_posix()
+    filepath: '{logs_folder}/checkpoints/checkpoint_{{epoch}}.keras'
+    monitor: 'rwrd'
+    verbose: 0
+    save_best_only: True
+    mode: 'max'
+    save_freq: 'epoch'
+  - classname: 'TensorBoard'
+    log_dir: 'self.logs_folder.as_posix()'
+    histogram_freq: 5
+    write_graph: True
+    write_images: True
+    write_steps_per_second: True
+    update_freq: 'epoch'
+    profile_batch: 0
+    embeddings_freq: 0
+    embeddings_metadata: None
 train:
   classname: 'DQNTrainer'
   num-episodes: 150

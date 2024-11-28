@@ -1,6 +1,6 @@
 import gymnasium as gym, itertools, copy, pathlib, time
-from keras import optimizers, metrics, losses, Model
-from utils import Config, metrics as CustomMetrics
+from keras import optimizers, metrics, losses, Model, callbacks
+from utils import Config, metrics as CustomMetrics, callback as CustomCallbacks
 from model import ModelFactory
 from policy import PolicyFactory
 from replay_buffer import ReplayBufferFactory, BaseReplayBuffer
@@ -19,13 +19,16 @@ class ExperimentRunner:
         self.agent = None
         self.trainer = None
 
-        self.base_folder:pathlib.Path = pathlib.Path('data/tensorboard')
+        self.base_folder:pathlib.Path = pathlib.Path('./data/tensorboard')
 
     def _setup(self, config = None):
+        ##############################################
+        # Load given config or make a copy of main one
         if config is None:
             config = self.config.copy()
 
-        # environment
+        #############
+        # Environment
         env_config:dict = config.get('environment', {})
         self.logs_folder = self.base_folder / env_config.get('id','unkown_env')
         self.env:gym.Env = gym.make(**env_config)
@@ -36,15 +39,16 @@ class ExperimentRunner:
         input_shape = self.env.observation_space.shape
         num_actions = self.env.action_space.n
 
-        # model
-        # model_config = Config.get_config_vars(config, 'model')
+        #######
+        # Model
         model_config = config.get('model',{})
         self.logs_folder = self.logs_folder / model_config.get('classname','unkown_model')
         model_config['input_shape'] = input_shape
         model_config['num_actions'] = num_actions
         self.model: Model = ModelFactory.create_model(**model_config)
 
-        # compile
+        ##############
+        # Compile call
         compile_config:dict = config.get('compile', {})
             # loss
         loss_config = compile_config.get('loss',{'function': 'MeanSquaredError'})
@@ -63,11 +67,11 @@ class ExperimentRunner:
         metrics_array = []
         metrics_namespaces = [metrics, CustomMetrics]
         for metric_config in metrics_config:
-            metric_class_name = metric_config.get('class','')
+            metric_class_name = metric_config.pop('classname','')
             for namespace in metrics_namespaces:
-                metric_class = getattr(namespace, metric_class_name, None)  # Get metric class from tf.keras.metrics
+                metric_class = getattr(namespace, metric_class_name, None)  # Get metric class
                 if metric_class:
-                    metric_params = metric_config.get('params',{})
+                    metric_params = metric_config
                     metric_instance = metric_class(**metric_params)
                     metrics_array.append(metric_instance)
                     break
@@ -77,35 +81,66 @@ class ExperimentRunner:
         self.model.compile(loss=loss_class(**loss_config), optimizer=optimizer_class(**optimizer_config), metrics=metrics_array)
         self.model.summary()
 
-
-        # policy
-        # policy_config = Config.get_config_vars(config, "policy")
+        ########
+        # Policy
         policy_config = config.get("policy", {})
         policy_config['num_actions'] = num_actions
         self.policy = PolicyFactory.create_policy(**policy_config)
 
-        # replay buffer
+        ###############
+        # Replay Buffer
         replay_config = config.get("replay-buffer", {})
         self.replay_buffer:BaseReplayBuffer = ReplayBufferFactory.create_buffer(**replay_config)
 
-        # agent
+        #######
+        # Agent
         agent_config = config.get("agent", {})
         self.logs_folder = self.logs_folder / agent_config.get('classname','unkown_agent')
         agent_config['env'] = self.env
         agent_config['model'] = self.model
         agent_config['policy'] = self.policy
         agent_config['replay_buffer'] = self.replay_buffer
-        # agent = DQNAgent(env, model, policy, replay, agent_config)
         self.agent = AgentFactory.create_agent(**agent_config)
 
-        # Crear instancias de Trainer y Evaluator
+        ###########
+        # Callbacks
+        callbacks_config: tuple[dict] = config.get("callbacks", [])
+        callbacks_array = []
+        metrics_namespaces = [callbacks, CustomCallbacks]
+        for callback_config in callbacks_config:
+            callback_class_name = callback_config.pop('classname','')
+            callback_config = self._apply_config_vars(callback_config)
+            for namespace in metrics_namespaces:
+                callback_class = getattr(namespace, callback_class_name, None)  # Get callback class
+                if callback_class:
+                    callback_params = callback_config.get('args')
+                    if callback_params:
+                        callback_instance = callback_class(*callback_params)
+                    else:
+                        callback_instance = callback_class(**callback_config)
+                    callbacks_array.append(callback_instance)
+                    break
+            if metric_class is None:
+                raise Warning(f"Callback class '{callback_class_name}' not found.")
+
+        
+
+        #########
+        # Trainer
         trainer_config = config.get("train", {})
         trainer_config['agent'] = self.agent
+        trainer_config['callbacks'] = callbacks_array
         trainer_config['logs-folder'] = (self.logs_folder / time.strftime('%m%d_%H%M')).absolute().as_posix()
         self.trainer = TrainerFactory.create_trainer(**trainer_config)
         
-        # evaluator = Evaluator(agent, num_episodes=5)        
-        # # Crear trainer según el tipo especificado en la configuración
+        #################
+        # TODO: Evaluator
+    
+    def _apply_config_vars(self, config):
+        for key, value in config.items():
+            if isinstance(value, str):
+                config[key] = value.format(logs_folder=self.logs_folder.as_posix())
+        return config
 
     def _get_hyperparams_combinations(self, hyperparams):
         return list(itertools.product(*{k: v for k, v in hyperparams.items()}.values()))

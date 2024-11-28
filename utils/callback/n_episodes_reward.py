@@ -3,12 +3,23 @@ from keras.src import callbacks
 
 class NEpisodesReward(callbacks.Callback):
     
-    def __init__(self, name=None, n_episodes=50, n_ep_fn=np.mean, batches_fn=np.sum):
+    def __init__(self, name=None, n_episodes=50, n_ep_fn_name='mean', batches_fn_name='sum'):
         super().__init__()
         self.metric_name = name or f'{n_episodes}_ep_{n_ep_fn.__name__}'
         self.n_episodes = n_episodes
-        self.n_ep_fn = n_ep_fn
-        self.batches_fn = batches_fn
+
+        n_ep_fn = getattr(np, n_ep_fn_name, None)
+        if n_ep_fn:
+            self.n_ep_fn = n_ep_fn
+        else:
+            raise Warning(f"Function '{n_ep_fn_name}' from numpy not found.")
+        
+        batches_fn = getattr(np, batches_fn_name, None)
+        if batches_fn:
+            self.batches_fn = batches_fn
+        else:
+            raise Warning(f"Function '{batches_fn_name}' from numpy not found.")
+        
         self.batches_rewards = []
         self.episodes_rewards = []
         

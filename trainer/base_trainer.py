@@ -1,8 +1,7 @@
 import numpy as np, tensorflow as tf, time, pathlib
-from keras.src import callbacks as callbacks_module
 from agent import BaseAgent
 from tensorboard.plugins.hparams import api as hp
-from utils import callback as custom_callback
+from keras.src import callbacks
 
 class BaseTrainer:
     def __init__(self, agent:BaseAgent, **config):
@@ -10,36 +9,36 @@ class BaseTrainer:
         self.num_episodes = config.get('num-episodes', 100)
         self.logs_folder:pathlib.Path = pathlib.Path(config.get('logs-folder'))
         self.hyperparams = config.get('hyperparams', None)
-        callbacks = config.get('callbacks', [])
-        callbacks = [
-            custom_callback.GenericMetrics(['epsilon','rwrd'], ['epsilon','reward'], [np.amin, np.sum]),
-            # custom_callback.EpisodeReward(),
-            custom_callback.NEpisodesReward('50_ep_rwrd', 50, np.mean, np.sum),
-            custom_callback.MetricsUpdater(),
-            custom_callback.MetricsPrinter(['Ep', 'Epsilon', 'Rwrd', '50_Ep_Rwrd'],['episode', 'epsilon', 'rwrd', '50_ep_rwrd']),
-            callbacks_module.ModelCheckpoint(
-                (self.logs_folder / 'checkpoints/checkpoint_{epoch}.keras').as_posix(),
-                monitor='rwrd',
-                verbose=0,
-                save_best_only=True,
-                mode="max",
-            ),
-            callbacks_module.TensorBoard(
-                self.logs_folder.as_posix(),
-                histogram_freq=5,
-                update_freq='epoch',
-                write_steps_per_second=True
-            )
-        ]
-        if not isinstance(callbacks, callbacks_module.CallbackList):
-            callbacks = callbacks_module.CallbackList(
-                callbacks,
+        callbacks_arr = config.get('callbacks', [])
+        # callbacks = [
+        #     custom_callback.GenericMetrics(['epsilon','rwrd'], ['epsilon','reward'], [np.amin, np.sum]),
+        #     # custom_callback.EpisodeReward(),
+        #     custom_callback.NEpisodesReward('50_ep_rwrd', 50, np.mean, np.sum),
+        #     custom_callback.MetricsUpdater(),
+        #     custom_callback.MetricsPrinter(['Ep', 'Epsilon', 'Rwrd', '50_Ep_Rwrd'],['episode', 'epsilon', 'rwrd', '50_ep_rwrd']),
+        #     callbacks_module.ModelCheckpoint(
+        #         (self.logs_folder / 'checkpoints/checkpoint_{epoch}.keras').as_posix(),
+        #         monitor='rwrd',
+        #         verbose=0,
+        #         save_best_only=True,
+        #         mode="max",
+        #     ),
+        #     callbacks_module.TensorBoard(
+        #         self.logs_folder.as_posix(),
+        #         histogram_freq=5,
+        #         update_freq='epoch',
+        #         write_steps_per_second=True
+        #     )
+        # ]
+        if not isinstance(callbacks_arr, callbacks.CallbackList):
+            callbacks_arr = callbacks.CallbackList(
+                callbacks_arr,
                 add_history=True,
                 add_progbar=False,
                 epochs=self.num_episodes,
                 model=self.agent.model,
             )
-        self.callbacks:callbacks_module.CallbackList = callbacks
+        self.callbacks:callbacks.CallbackList = callbacks_arr
         self.config = config
 
     def train(self):

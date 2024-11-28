@@ -22,22 +22,6 @@ compile:
   optimizer:
     classname: "Adam"
     learning_rate: 0.001
-  # metrics:
-  #   - class: "MeanSquaredError"
-  #     params:
-  #       name: "mse"
-  #   - class: "MeanAbsoluteError"
-  #     params:
-  #       name: "mae"
-  #   - class: "RootMeanSquaredError"
-  #     params:
-  #       name: "root_mse"
-  #   - class: "MeanAbsolutePercentageError"
-  #     params:
-  #       name: "mape"
-  #   - class: "R2Score"
-  #     params:
-  #       name: "r2_score"
 policy:
   classname: "epsilon"
   update-frequency: "episode"
